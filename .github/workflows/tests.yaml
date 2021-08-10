@@ -53,6 +53,32 @@ jobs:
         run: |
           source ${HOME}/.venv/bin/activate
           pytest -ra tests
+    
+  macos-smoke-tests:
+    strategy:
+      matrix:
+        os: [macos-10.15]
+        python-version: [3.8, 3.9]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install charmcraft and dependencies
+        run: |
+          pip install -U -r requirements.txt -e .
+      - name: Mac OS Multipass Provider Smoke Tests
+        run: |
+          pushd "$(mktemp -d)"
+          charmcraft -v init --author testuser
+          charmcraft -v pack
+          test -f *.charm
+          charmcraft -v clean
+          popd
 
   snap-build:
     runs-on: ubuntu-20.04
@@ -109,23 +135,20 @@ jobs:
           sudo lxd init --auto
       - name: Run smoke tests
         run: |
-          mkdir -p charm-smoke-test
-          pushd charm-smoke-test
+          pushd "$(mktemp -d)"
           charmcraft -v init --author testuser
           sg lxd -c "charmcraft -v pack"
           test -f *.charm
           sg lxd -c "charmcraft -v clean"
           popd
 
-          mkdir -p another-directory
-          pushd another-directory
+          pushd "$(mktemp -d)"
           sg lxd -c "charmcraft -v pack --project-dir ../charm-smoke-test"
           test -f *.charm
           sg lxd -c "charmcraft -v clean --project-dir ../charm-smoke-test"
           popd
 
-          mkdir -p destructive-mode-tests
-          pushd destructive-mode-tests
+          pushd "$(mktemp -d)"
           source /etc/os-release
           charmcraft -v init --author testuser
           sed -i "s|20.04|$VERSION_ID|g" charmcraft.yaml
@@ -164,3 +187,12 @@ jobs:
             echo "configure script failure"
             exit 1
           fi
+      - name: Linux Multipass Provider Tests
+        run: |
+          sudo snap set charmcraft provider=multipass
+
+          pushd "$(mktemp -d)"
+          charmcraft -v pack --project-dir ../charm-smoke-test
+          test -f *.charm
+          charmcraft -v clean --project-dir ../charm-smoke-test
+          popd

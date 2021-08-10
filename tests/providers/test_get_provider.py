@@ -13,10 +13,19 @@
 # limitations under the License.
 #
 # For further info, check https://github.com/canonical/charmcraft
+from unittest import mock
 
+import pytest
 
 from charmcraft.providers import LXDProvider, get_provider
 
 
-def test_get_provider():
+@pytest.fixture
+def mock_snap():
+    with mock.patch("charmcraft.providers._get_provider.snap", autospec=True) as mock_snap:
+        mock_snap.get_snap_configuration.return_value = None
+        yield mock_snap
+
+
+def test_get_provider(mock_snap):
     assert isinstance(get_provider(), LXDProvider)
