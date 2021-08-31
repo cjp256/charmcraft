@@ -48,7 +48,6 @@ ARCH_TRANSLATIONS = {
     "ppc": "powerpc",
     "ppc64le": "ppc64el",
     "x86_64": "amd64",
-
     # Windows uses "AMD64".
     "AMD64": "amd64",
 }
@@ -61,7 +60,11 @@ def make_executable(fh):
     mode_r = mode & S_IRALL
     mode_x = mode_r >> 2
     mode = mode | mode_x
-    os.fchmod(fileno, mode)
+    try:
+        os.fchmod(fileno, mode)
+    except AttributeError:
+        # Not supported on some platforms.
+        pass
 
 
 def load_yaml(fpath):
