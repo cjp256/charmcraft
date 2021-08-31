@@ -105,7 +105,13 @@ class _MessageHandler:
 
     def ended_ok(self):
         """Cleanup after successful execution."""
-        os.unlink(self._log_filepath)
+        try:
+            os.unlink(self._log_filepath)
+        except PermissionError:
+            # FIXME: Fails to unlink on Windows, should be addressed with craft-cli.
+            # PermissionError: [WinError 32] The process cannot access the file because it is
+            # being used by another process.
+            pass
 
     def ended_interrupt(self):
         """Clean up on keyboard interrupt."""
