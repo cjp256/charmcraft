@@ -105,6 +105,6 @@ try:
     )
 
 finally:
-    #if version_path.exists():
-    #version_path.unlink()
+    if version_path.exists():
+        version_path.unlink()
     version_backup.rename(version_path)
