@@ -67,11 +67,12 @@ def ensure_charmcraft_environment_is_supported():
 
     :raises CommandError: if unsupported environment.
     """
-    if (
-        not is_charmcraft_running_in_supported_environment()
-        and not is_charmcraft_running_in_developer_mode()
-    ):
-        raise CommandError(
-            "For a supported user experience, please use the Charmcraft snap. "
-            "For more information, please see https://juju.is/docs/sdk/setting-up-charmcraft"
-        )
+    if sys.platform == "linux":
+        if (
+            not is_charmcraft_running_in_supported_environment()
+            and not is_charmcraft_running_in_developer_mode()
+        ):
+            raise CommandError(
+                "For a supported user experience, please use the Charmcraft snap. "
+                "For more information, please see https://juju.is/docs/sdk/setting-up-charmcraft"
+            )
