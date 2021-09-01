@@ -21,6 +21,7 @@ import os
 import re
 import sys
 from datetime import date
+from typing import Optional
 
 from charmcraft.cmdbase import BaseCommand, CommandError
 from charmcraft.utils import make_executable, get_templates_environment
@@ -59,19 +60,14 @@ example tests with a harness to run them.
 """
 
 
-def _get_users_full_name_gecos() -> str:
+def _get_users_full_name_gecos() -> Optional[str]:
     """Get user's full name from Gecos (/etc/passwd)."""
     import pwd
 
     try:
-        author = pwd.getpwuid(os.getuid()).pw_gecos.split(",", 1)[0]
+        return pwd.getpwuid(os.getuid()).pw_gecos.split(",", 1)[0]
     except KeyError:
-        author = None
-
-    if not author:
-        raise CommandError("Author not given, and nothing in GECOS field")
-
-    return author
+        return None
 
 
 def _get_users_full_name_windows() -> str:
@@ -94,9 +90,14 @@ def _get_author_from_user() -> str:
     Fall back to using the user's login name.
     """
     if sys.platform == "win32":
-        return _get_users_full_name_windows()
+        author = _get_users_full_name_windows()
     else:
-        return _get_users_full_name_gecos()
+        author = _get_users_full_name_gecos()
+
+    if not author:
+        raise CommandError("Unable to automatically determine author's name, use --author")
+
+    return author
 
 
 class InitCommand(BaseCommand):
