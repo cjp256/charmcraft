@@ -19,6 +19,7 @@
 import logging
 import os
 import re
+import sys
 from datetime import date
 
 from charmcraft.cmdbase import BaseCommand, CommandError
@@ -58,6 +59,46 @@ example tests with a harness to run them.
 """
 
 
+def _get_users_full_name_gecos() -> str:
+    """Get user's full name from Gecos (/etc/passwd)."""
+    import pwd
+
+    try:
+        author = pwd.getpwuid(os.getuid()).pw_gecos.split(",", 1)[0]
+    except KeyError:
+        author = None
+
+    if not author:
+        raise CommandError("Author not given, and nothing in GECOS field")
+
+    return author
+
+
+def _get_users_full_name_windows() -> str:
+    """Get user's full name on Windows."""
+    import ctypes
+
+    name_display = 3
+
+    size = ctypes.pointer(ctypes.c_ulong(0))
+    ctypes.windll.secur32.GetUserNameExW(name_display, None, size)
+
+    name_buffer = ctypes.create_unicode_buffer(size.contents.value)
+    ctypes.windll.secur32.GetUserNameExW(name_display, name_buffer, size)
+    return name_buffer.value
+
+
+def _get_author_from_user() -> str:
+    """Get the author's name by querying system's user information.
+
+    Fall back to using the user's login name.
+    """
+    if sys.platform == "win32":
+        return _get_users_full_name_windows()
+    else:
+        return _get_users_full_name_gecos()
+
+
 class InitCommand(BaseCommand):
     """Initialize a directory to be a charm project."""
 
@@ -88,19 +129,7 @@ class InitCommand(BaseCommand):
         logger.debug("Using project directory %r", str(self.config.project.dirpath))
 
         if args.author is None:
-            try:
-                # Not all platforms support pwd, so we do a late import here and handle
-                # the potential import error.
-                import pwd
-
-                gecos = pwd.getpwuid(os.getuid()).pw_gecos.split(",", 1)[0]
-            except (KeyError, ImportError):
-                # no info for the user
-                gecos = None
-            if not gecos:
-                raise CommandError("Author not given, and nothing in GECOS field")
-            logger.debug("Setting author to %r from GECOS field", gecos)
-            args.author = gecos
+            args.author = _get_author_from_user()
 
         if not args.name:
             args.name = self.config.project.dirpath.name
